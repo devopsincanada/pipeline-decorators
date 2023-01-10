@@ -1,0 +1,65 @@
+{
+  "manifestVersion": 1,
+  "id": "pipeline-decorators",
+  "version": "0.1.0",
+  "name": "Pipeline Decorators",
+  "publisher": "steve-keeler-microsoft",
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "description": "Demonstrate pipeline decorators",
+  "categories": [
+    "Azure Pipelines"
+  ],
+  "contributions": [
+    {
+      "id": "pipeline-decorators-pre-job-task",
+      "type": "ms.azure-pipelines.pipeline-decorator",
+      "targets": [
+        "ms.azure-pipelines-agent-job.pre-job-tasks"
+      ],
+      "properties": {
+      "template": "pre-job-task.yml"
+      }
+    },
+    {
+      "id": "pipeline-decorators-post-job-task",
+      "type": "ms.azure-pipelines.pipeline-decorator",
+      "targets": [
+        "ms.azure-pipelines-agent-job.post-job-tasks"
+      ],
+      "properties": {
+      "template": "post-job-task.yml"
+      }
+    },
+    {
+      "id": "pipeline-decorators-post-checkout-task",
+      "type": "ms.azure-pipelines.pipeline-decorator",
+      "targets": [
+        "ms.azure-pipelines-agent-job.post-checkout-tasks"
+      ],
+      "properties": {
+      "template": "post-checkout-task.yml"
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "pre-job-task.yml",
+      "addressable": true,
+      "contentType": "text/plain"
+    },
+    {
+      "path": "post-job-task.yml",
+      "addressable": true,
+      "contentType": "text/plain"
+    },
+    {
+      "path": "post-checkout-task.yml",
+      "addressable": true,
+      "contentType": "text/plain"
+    }
+  ]
+}

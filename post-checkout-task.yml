@@ -1,0 +1,8 @@
+steps:
+
+- task: CmdLine@2
+  condition: not(eq(variables.skipPostCheckoutTask, 'true'))
+  displayName: 'Post-Checkout Task'
+  inputs:
+    script: |
+      echo 'Pipeline decorator post-checkout task'

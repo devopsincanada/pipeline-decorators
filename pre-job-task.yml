@@ -1,0 +1,8 @@
+steps:
+
+- task: CmdLine@2
+  condition: not(eq(variables.skipPreJobTask, 'true'))
+  displayName: 'Pre-Job Task'
+  inputs:
+    script: |
+      echo 'Pipeline decorator pre-job task'

@@ -1,0 +1,19 @@
+
+trigger: none
+
+pool:
+  vmImage: windows-latest
+
+# variables:
+#   skipPreJobTask: true
+#   skipPostCheckoutTask: true
+#   skipPostJobTask: true
+
+steps:
+- script: |
+    echo First step in build and deploy pipeline
+  displayName: 'Step 1'
+
+- script: |
+    echo Second step in build and deploy pipeline
+  displayName: 'Step 2'
