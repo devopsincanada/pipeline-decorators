@@ -2,7 +2,7 @@ steps:
 
 - task: CmdLine@2
   condition: not(eq(variables.skipPostJobTask, 'true'))
-  displayName: 'Post-Job Task'
+  displayName: 'PDEC: Post-Job Task'
   inputs:
     script: |
       echo 'Pipeline decorator post-job task'

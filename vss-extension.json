@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "id": "pipeline-decorators",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Pipeline Decorators",
   "publisher": "steve-keeler-microsoft",
   "targets": [
