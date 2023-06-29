@@ -1,0 +1,127 @@
+#
+# 1. Install the Azure DevOps Extension Tasks from the Visual Studio Marketplace.
+# https://marketplace.visualstudio.com/items?itemName=ms-devlabs.vsts-developer-tools-build-tasks&targetId=85fb3d5a-9f21-420f-8de3-fc80bf29054b&utm_source=vstsproduct&utm_medium=ExtHubManageList
+#
+# 2. Follow steps in "Create a build and release pipeline to publish the extension to Marketplace".
+# https://learn.microsoft.com/azure/devops/extend/develop/add-build-task?view=azure-devops#6-create-a-build-and-release-pipeline-to-publish-the-extension-to-marketplace
+#
+
+parameters:
+  - name: ExtensionMainfestFile
+    type: string
+    displayName: Extension manifest file
+    default: 'vss-extension.json'
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  # $(PublisherId), $(ExtensionId), $(ExtensionName), $(ArtifactName), $(ShareWithOrgs)
+  - group: pipeline-decorators-variables
+    
+stages:
+- stage:
+  jobs:
+  - job:
+    steps:
+
+    - task: NodeTool@0
+      displayName: 'Install node'
+      inputs:
+        versionSpec: '>=18.x'
+        checkLatest: true
+
+    - task: Npm@1
+      displayName: 'Install typescript'
+      inputs:
+        command: 'custom'
+        customCommand: 'install -g typescript'
+        workingDir: '$(System.DefaultWorkingDirectory)'
+
+    - task: Npm@1
+      displayName: 'Install tfx-cli'
+      inputs:
+        command: 'custom'
+        customCommand: 'install -g tfx-cli'
+        workingDir: '$(System.DefaultWorkingDirectory)'
+
+    - task: QueryAzureDevOpsExtensionVersion@4
+      name: Query
+      inputs:
+        connectTo: 'VsTeam'
+        connectedServiceName: 'VisualStudioMarketplace'
+        publisherId: 'steve-keeler-microsoft'
+        extensionId: 'pipeline-decorators'
+        versionAction: 'Patch'
+
+    - task: PowerShell@2
+      displayName: 'Show extension version'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          Write-Output "$(Query.Extension.Version)"
+
+    # - task: PowerShell@2
+    #   displayName: 'Build extension'
+    #   inputs:
+    #     pwsh: true
+    #     targetType: 'inline'
+    #     script: |
+    #       Write-Host "##vso[task.setvariable variable=ExtensionId]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.id')"
+    #       Write-Host "##vso[task.setvariable variable=Version]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.version')"
+    #       Write-Host "##vso[task.setvariable variable=PublisherId]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.publisher')"
+    #       Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($publisher).$($id)-$$(version).vsix"
+
+    #       npx tfx-cli extension create --manifest-globs ${{ parameters.ExtensionManifestFile }} --output-path $output
+    #     workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+    # - task: PowerShell@2
+    #   displayName: 'Set extension version'
+    #   inputs:
+    #     pwsh: true
+    #     targetType: 'inline'
+    #     script: |
+    #       $version = $(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.version')
+    #       $version = $version.Split('.')
+    #       $version[2] = $version[2] + 1
+    #       $version = $version -join '.'
+
+    #       Write-Host "##vso[task.setvariable variable=Version]$version"
+    #       Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($publisher).$($id)-$$(version).vsix"
+
+    #       $manifest = Get-Content ${{ parameters.ExtensionManifestFile }} | ConvertFrom-Json
+    #       $manifest.version = $version
+    #       $manifest | ConvertTo-Json -Depth 100 | Set-Content ${{ parameters.ExtensionManifestFile }}
+
+    #       $diff = ([DateTime]::Now - [DateTime]::Parse("2023-06-01"))
+    #       $diff.ToString()
+
+    
+    # - task: PackageAzureDevOpsExtension@4
+    #   displayName: 'Package extension'
+    #   inputs:
+    #     # rootFolder: 
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     updateTasksVersion: false
+    
+    # - task: PublishAzureDevOpsExtension@4
+    #   displayName: 'Publish extension'
+    #   inputs:
+    #     connectTo: 'VsTeam'
+    #     connectedServiceName: 'VisualStudioMarketplace'
+    #     fileType: 'vsix'
+    #     vsixFile: '$output'
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     extensionName: '$(ExtensionName)'
+    #     updateTasksVersion: false
+    #     extensionVisibility: 'private'
+    #     extensionPricing: 'free'
+    #     shareWith: '$(ShareWithOrgs)'
+    #     noWaitValidation: true
+
