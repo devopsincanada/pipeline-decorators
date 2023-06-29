@@ -48,6 +48,12 @@ stages:
         customCommand: 'install -g tfx-cli'
         workingDir: '$(System.DefaultWorkingDirectory)'
 
+    - task: TfxInstaller@4
+      displayName: 'Install tfx-cli'
+      inputs:
+        version: 'v0.x'
+        checkLatest: true
+
     - task: QueryAzureDevOpsExtensionVersion@4
       name: Query
       inputs:
