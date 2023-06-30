@@ -19,7 +19,9 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
-  # Group defines variables: $(ServiceConnection), $(ShareWithOrgs)
+  # Group defines variables: $(PersonalAccessToken), $(ShareWithOrgs)
+  # 'PersonalAccessToken' is an Azure DevOps PAT with full Marketplace access
+  # 'ShareWithOrgs' is a comma-separated list of Azure DevOps orgs to share the extension with
   - group: pipeline-decorators-variables
     
 stages:
@@ -28,25 +30,26 @@ stages:
   - job:
     steps:
 
+    # Should already be installed on the build agent
     # - task: NodeTool@0
     #   displayName: 'Install node'
     #   inputs:
     #     versionSpec: '>=18.x'
     #     checkLatest: true
 
-    # - task: Npm@1
-    #   displayName: 'Install typescript'
-    #   inputs:
-    #     command: 'custom'
-    #     customCommand: 'install -g typescript'
-    #     workingDir: '$(System.DefaultWorkingDirectory)'
+    - task: Npm@1
+      displayName: 'Install typescript'
+      inputs:
+        command: 'custom'
+        customCommand: 'install -g typescript'
+        # workingDir: '$(System.DefaultWorkingDirectory)'
 
-    # - task: Npm@1
-    #   displayName: 'Install tfx-cli'
-    #   inputs:
-    #     command: 'custom'
-    #     customCommand: 'install -g tfx-cli'
-    #     workingDir: '$(System.DefaultWorkingDirectory)'
+    - task: Npm@1
+      displayName: 'Install tfx-cli'
+      inputs:
+        command: 'custom'
+        customCommand: 'install -g tfx-cli'
+        # workingDir: '$(System.DefaultWorkingDirectory)'
 
     - task: PowerShell@2
       name: GetVariables
@@ -62,30 +65,56 @@ stages:
           Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($publisher).$($id)-$$(version).vsix"
         # workingDirectory: '$(System.DefaultWorkingDirectory)'
 
-    - task: TfxInstaller@4
-      displayName: 'Install tfx-cli'
-      inputs:
-        version: 'v0.x'
-        checkLatest: true
-
-    - task: QueryAzureDevOpsExtensionVersion@4
-      name: Query
-      inputs:
-        connectTo: 'VsTeam'
-        connectedServiceName: $(ServiceConnection)
-        publisherId: '$(PublisherId)'
-        extensionId: '$(ExtensionId)'
-        # extensionTag: '$(ExtensionTag)'
-        versionAction: 'Patch'
-        # output variable: $(Query.Extension.Version)
-
     - task: PowerShell@2
-      displayName: 'Show extension version'
       inputs:
         pwsh: true
         targetType: 'inline'
         script: |
-          Write-Output "$(Query.Extension.Version)"
+          # Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($PublisherId).$($ExtensionId)-$$(Version).vsix"
+
+          $extensionDetails = (tfx extension show --json --no-color --service-url https://marketplace.visualstudio.com/ --auth-type pat --token $(PersonalAccessToken) --publisher '$(PublisherId)' --extension-id '$(ExtensionId)')
+
+
+          if (!([System.string]::IsNullOrEmpty($extensionDetails))) {
+            Write-Output $extensionDetails
+
+            # $extensionDetails = $extensionDetails | ConvertFrom-Json
+            # Write-Host "##vso[task.setvariable variable=ExtensionVersion]$($extensionDetails.versions[0].version)"
+          } else {
+            Write-Output "No extension details found"
+
+            # Write-Host "##vso[task.setvariable variable=ExtensionVersion]0.0.0"
+          }
+        # workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+
+    # - task: QueryAzureDevOpsExtensionVersion@4
+    #   name: Query
+    #   inputs:
+    #     connectTo: 'VsTeam'
+    #     connectedServiceName: $(ServiceConnection)
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     # extensionTag: '$(ExtensionTag)'
+    #     versionAction: 'Patch'
+    #     # output variable: $(Query.Extension.Version)
+
+    # - task: PowerShell@2
+    #   condition: failed()
+    #   displayName: 'Show extension version'
+    #   inputs:
+    #     pwsh: true
+    #     targetType: 'inline'
+    #     script: |
+    #       Write-Output "$(Query.Extension.Version)"
+
+    # - task: PowerShell@2
+    #   displayName: 'Show extension version'
+    #   inputs:
+    #     pwsh: true
+    #     targetType: 'inline'
+    #     script: |
+    #       Write-Output "$(Query.Extension.Version)"
 
 
 #====================================================================================================
