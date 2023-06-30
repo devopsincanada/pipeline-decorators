@@ -1,9 +1,9 @@
 {
   "manifestVersion": 1,
   "id": "pipeline-decorators",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "name": "Pipeline Decorators",
-  "publisher": "steve-keeler-microsoft",
+  "publisher": "steve-keeler-mcap873443",
   "targets": [
     {
       "id": "Microsoft.VisualStudio.Services"

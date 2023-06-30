@@ -19,7 +19,7 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
-  # $(PublisherId), $(ExtensionId), $(ExtensionName), $(ArtifactName), $(ShareWithOrgs)
+  # Group defines variables: $(ServiceConnection), $(ShareWithOrgs)
   - group: pipeline-decorators-variables
     
 stages:
@@ -28,25 +28,39 @@ stages:
   - job:
     steps:
 
-    - task: NodeTool@0
-      displayName: 'Install node'
-      inputs:
-        versionSpec: '>=18.x'
-        checkLatest: true
+    # - task: NodeTool@0
+    #   displayName: 'Install node'
+    #   inputs:
+    #     versionSpec: '>=18.x'
+    #     checkLatest: true
 
-    - task: Npm@1
-      displayName: 'Install typescript'
-      inputs:
-        command: 'custom'
-        customCommand: 'install -g typescript'
-        workingDir: '$(System.DefaultWorkingDirectory)'
+    # - task: Npm@1
+    #   displayName: 'Install typescript'
+    #   inputs:
+    #     command: 'custom'
+    #     customCommand: 'install -g typescript'
+    #     workingDir: '$(System.DefaultWorkingDirectory)'
 
-    - task: Npm@1
-      displayName: 'Install tfx-cli'
+    # - task: Npm@1
+    #   displayName: 'Install tfx-cli'
+    #   inputs:
+    #     command: 'custom'
+    #     customCommand: 'install -g tfx-cli'
+    #     workingDir: '$(System.DefaultWorkingDirectory)'
+
+    - task: PowerShell@2
+      name: GetVariables
+      displayName: 'Get variables'
       inputs:
-        command: 'custom'
-        customCommand: 'install -g tfx-cli'
-        workingDir: '$(System.DefaultWorkingDirectory)'
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          Write-Host "##vso[task.setvariable variable=ExtensionId]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.id')"
+          Write-Host "##vso[task.setvariable variable=ExtensionName]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.name')"
+          Write-Host "##vso[task.setvariable variable=PublisherId]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.publisher')"
+          Write-Host "##vso[task.setvariable variable=Version]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.version')"
+          Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($publisher).$($id)-$$(version).vsix"
+        # workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: TfxInstaller@4
       displayName: 'Install tfx-cli'
@@ -58,10 +72,12 @@ stages:
       name: Query
       inputs:
         connectTo: 'VsTeam'
-        connectedServiceName: 'VisualStudioMarketplace'
-        publisherId: 'steve-keeler-microsoft'
-        extensionId: 'pipeline-decorators'
+        connectedServiceName: $(ServiceConnection)
+        publisherId: '$(PublisherId)'
+        extensionId: '$(ExtensionId)'
+        # extensionTag: '$(ExtensionTag)'
         versionAction: 'Patch'
+        # output variable: $(Query.Extension.Version)
 
     - task: PowerShell@2
       displayName: 'Show extension version'
@@ -70,6 +86,61 @@ stages:
         targetType: 'inline'
         script: |
           Write-Output "$(Query.Extension.Version)"
+
+
+#====================================================================================================
+
+    # - task: PackageAzureDevOpsExtension@4
+    #   inputs:
+    #     rootFolder: 
+    #     patternManifest: '${{ parameters.ExtensionManifestFile }}'
+    #     outputPath: 'GeneratedVsix.vsix'
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     updateTasksVersion: false
+
+    # - task: PublishAzureDevOpsExtension@4
+    #   inputs:
+    #     connectTo: 'VsTeam'
+    #     connectedServiceName: 'VisualStudioMarketplace'
+    #     fileType: 'vsix'
+    #     vsixFile: 'GeneratedVsix.vsix'
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     extensionTag: '$(ExtensionTag)'
+    #     extensionName: '$(ExtensionName)'
+    #     extensionVersion: '$(ExtensionVersion)'
+    #     extensionVisibility: 'private'
+    #     extensionPricing: 'free'
+    #     shareWith: '$(ShareWithOrgs)'
+    #     noWaitValidation: true
+    #     cwd: '$(System.DefaultWorkingDirectory)'
+
+    # - task: IsAzureDevOpsExtensionValid@4
+    #   inputs:
+    #     connectTo: 'VsTeam'
+    #     connectedServiceName: 'VisualStudioMarketplace'
+    #     method: 'id'
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     extensionTag: '$(ExtensionTag)'
+    #     extensionVersion: '$(ExtensionVersion)'
+    #     minTimeout: '5'
+
+    # - task: UnpublishAzureDevOpsExtension@4
+    #   inputs:
+    #     connectTo: 'VsTeam'
+    #     connectedServiceName: 'VisualStudioMarketplace'
+    #     method: 'id'
+    #     publisherId: '$(PublisherId)'
+    #     extensionId: '$(ExtensionId)'
+    #     extensionTag: '$(ExtensionTag)'
+    #     arguments: '$(Args)'
+    #     cwd: '$(WorkingDir)'
+  
+  
+#====================================================================================================
+
 
     # - task: PowerShell@2
     #   displayName: 'Build extension'
