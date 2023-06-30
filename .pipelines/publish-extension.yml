@@ -7,7 +7,7 @@
 #
 
 parameters:
-  - name: ExtensionMainfestFile
+  - name: ExtensionManifestFile
     type: string
     displayName: Extension manifest file
     default: 'vss-extension.json'
