@@ -7,7 +7,7 @@
 #
 
 parameters:
-  - name: ExtensionManifestFile
+  - name: ManifestFile
     type: string
     displayName: Extension manifest file
     default: 'vss-extension.json'
@@ -58,35 +58,57 @@ stages:
         pwsh: true
         targetType: 'inline'
         script: |
-          Write-Host "##vso[task.setvariable variable=ExtensionId]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.id')"
-          Write-Host "##vso[task.setvariable variable=ExtensionName]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.name')"
-          Write-Host "##vso[task.setvariable variable=PublisherId]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.publisher')"
-          Write-Host "##vso[task.setvariable variable=Version]$(Get-Content ${{ parameters.ExtensionManifestFile }} | jq -r '.version')"
-          Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($publisher).$($id)-$$(version).vsix"
+          $publisherId = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.publisher')
+          $extensionId = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.id')
+          $extensionName = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.name')
+          $version = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.version')
+          $outputPath = $publisherId + '.' + $extensionId + '-' + $version + '.vsix'
+          Write-Host "##vso[task.setvariable variable=PublisherId]$publisherId"
+          Write-Host "##vso[task.setvariable variable=ExtensionId]$extensionId"
+          Write-Host "##vso[task.setvariable variable=ExtensionName]$extensionName"
+          Write-Host "##vso[task.setvariable variable=Version]$version"
+          Write-Host "##vso[task.setvariable variable=OutputPath]$outputPath"
         # workingDirectory: '$(System.DefaultWorkingDirectory)'
 
     - task: PowerShell@2
+      displayName: 'Get extension details'
       inputs:
         pwsh: true
         targetType: 'inline'
         script: |
           # Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($PublisherId).$($ExtensionId)-$$(Version).vsix"
 
-          $extensionDetails = (tfx extension show --json --no-color --service-url https://marketplace.visualstudio.com/ --auth-type pat --token $(PersonalAccessToken) --publisher '$(PublisherId)' --extension-id '$(ExtensionId)')
+          $extensionDetailsJson = (tfx extension show --json --no-color --service-url https://marketplace.visualstudio.com/ --auth-type pat --token $(PersonalAccessToken) --publisher '$(PublisherId)' --extension-id '$(ExtensionId)')
 
 
-          if (!([System.string]::IsNullOrEmpty($extensionDetails))) {
+          if ($extensionDetailsJson -ne 'null') {
             Write-Output $extensionDetails
 
-            # $extensionDetails = $extensionDetails | ConvertFrom-Json
+            $extensionDetails = ($extensionDetails | ConvertFrom-Json -Depth 100)
             # Write-Host "##vso[task.setvariable variable=ExtensionVersion]$($extensionDetails.versions[0].version)"
           } else {
             Write-Output "No extension details found"
-
-            # Write-Host "##vso[task.setvariable variable=ExtensionVersion]0.0.0"
+            Write-Host "##vso[task.setvariable variable=ExtensionVersion]0.0.0"
           }
         # workingDirectory: '$(System.DefaultWorkingDirectory)'
 
+    - task: PowerShell@2
+      displayName: 'Package extension'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          tfx extension create --manifests ${{ parameters.ManifestFile }} --output-path $(OutputPath)
+
+    - task: PowerShell@2
+      displayName: 'Publish extension'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --service-url https://marketplace.visualstudio.com/ --manifests ${{ parameters.ManifestFile }} --share-with '$(ShareWithOrgs)' --vsix $(OutputPath) --rev-version
+    
+    
 
     # - task: QueryAzureDevOpsExtensionVersion@4
     #   name: Query
