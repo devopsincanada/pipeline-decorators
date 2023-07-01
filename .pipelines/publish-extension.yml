@@ -45,14 +45,12 @@ stages:
     #     versionSpec: '>=18.x'
     #     checkLatest: true
 
-    - task: Npm@1
-      displayName: 'Install packages'
-      inputs:
-        command: 'custom'
-        customCommand: |
-          install -g typescript
-          install -g tfx-cli
-        # workingDir: '$(System.DefaultWorkingDirectory)'
+    # - task: Npm@1
+    #   displayName: 'Install typescript'
+    #   inputs:
+    #     command: 'custom'
+    #     customCommand: 'install -g typescript'
+    #     # workingDir: '$(System.DefaultWorkingDirectory)'
 
     # - task: Npm@1
     #   displayName: 'Install tfx-cli'
@@ -60,6 +58,16 @@ stages:
     #     command: 'custom'
     #     customCommand: 'install -g tfx-cli'
     #     # workingDir: '$(System.DefaultWorkingDirectory)'
+
+    - task: PowerShell@2
+      name: InstallPackages
+      displayName: 'Install packages'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          npm install -g typescript
+          npm install -g tfx-cli
 
     - task: PowerShell@2
       name: GetVariables
