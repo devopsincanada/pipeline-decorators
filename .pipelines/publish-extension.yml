@@ -100,9 +100,9 @@ stages:
 
 
           if ($extensionDetailsJson -ne 'null') {
-            Write-Output $extensionDetails
+            Write-Output $extensionDetailsJson
 
-            $extensionDetails = ($extensionDetails | ConvertFrom-Json -Depth 100)
+            $extensionDetails = ($extensionDetailsJson | ConvertFrom-Json -Depth 100)
             # Write-Host "##vso[task.setvariable variable=ExtensionVersion]$($extensionDetails.versions[0].version)"
           } else {
             Write-Output "No extension details found"
