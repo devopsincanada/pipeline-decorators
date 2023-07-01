@@ -5,6 +5,14 @@
 # 2. Follow steps in "Create a build and release pipeline to publish the extension to Marketplace".
 # https://learn.microsoft.com/azure/devops/extend/develop/add-build-task?view=azure-devops#6-create-a-build-and-release-pipeline-to-publish-the-extension-to-marketplace
 #
+# Publish from the command line:
+# https://learn.microsoft.com/azure/devops/extend/publish/command-line
+#
+# tfx reset --all
+#
+# Issues with publishing from the command line:
+# https://github.com/microsoft/vsmarketplace/discussions/161
+#
 
 parameters:
   - name: ManifestFile
@@ -106,7 +114,11 @@ stages:
         pwsh: true
         targetType: 'inline'
         script: |
-          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --service-url https://marketplace.visualstudio.com/ --manifests ${{ parameters.ManifestFile }} --share-with '$(ShareWithOrgs)' --vsix $(OutputPath) --rev-version
+          # tfx extension publish --auth-type pat --token $(PersonalAccessToken) --service-url https://marketplace.visualstudio.com/ --manifests ${{ parameters.ManifestFile }} --share-with $(ShareWithOrgs) --vsix $(OutputPath) --rev-version
+
+          # tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --share-with $(ShareWithOrgs) --vsix $(OutputPath) --rev-version
+
+          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $(OutputPath)
     
     
 
