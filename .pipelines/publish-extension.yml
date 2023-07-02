@@ -127,7 +127,7 @@ stages:
         targetType: 'inline'
         script: |
           Write-Output "Publishing extension..."
-          $PackageFile = ((Get-ChildItem -Filter '*.vsix' -File).Name)[0]
+          $PackageFile = (Get-ChildItem -Filter '*.vsix' -File)[0].Name
           Write-Output "Package file: $PackageFile"
           tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile --share-with $(ShareWithOrgs)
     
