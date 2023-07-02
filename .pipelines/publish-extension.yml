@@ -105,7 +105,7 @@ stages:
         script: |
           Write-Output "Incrementing patch number..."
           $manifest = (Get-Content -Raw ${{ parameters.ManifestFile }} | ConvertFrom-Json -Depth 100)
-          $version = $manifefst.version
+          $version = $manifest.version
           $versionParts = $version.Split('.')
           $versionParts[2] = [string]([int]$versionParts[2] + 1)
           $manifest.version = $versionParts -join '.'
