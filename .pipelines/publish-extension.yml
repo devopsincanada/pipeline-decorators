@@ -39,8 +39,8 @@ stages:
       persistCredentials: true
 
     - task: PowerShell@2
-      name: InstallPackages
-      displayName: 'Install packages'
+      name: InstallTools
+      displayName: 'Installing tools...'
       inputs:
         pwsh: true
         targetType: 'inline'
