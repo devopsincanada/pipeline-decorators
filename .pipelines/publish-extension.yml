@@ -24,8 +24,8 @@ pool:
 
 variables:
   # Group defines variables: $(PersonalAccessToken), $(ShareWithOrgs)
-  # 'PersonalAccessToken' is an Azure DevOps PAT with full Marketplace access
-  # 'ShareWithOrgs' is a comma-separated list of Azure DevOps orgs to share the extension with
+  #  'PersonalAccessToken' is an Azure DevOps PAT with full Marketplace access
+  #  'ShareWithOrgs' is a space-separated list of Azure DevOps orgs to share the extension with
   - group: pipeline-decorators-variables
     
 stages:
@@ -37,6 +37,20 @@ stages:
     - checkout: self
       clean: true
       persistCredentials: true
+
+    - task: PowerShell@2
+      displayName: 'Check PAT is set'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          Write-Output "Checking Personal Access Token..."
+          if ([string]::IsNullOrEmpty($(PersonalAccessToken))) {
+            Write-Output "PersonalAccessToken is not set. Please set it in the pipeline variable group named 'pipeline-decorators-variables'. See https://learn.microsoft.com/azure/devops/extend/publish/command-line for more information."
+            exit 1
+          } else {
+            Write-Output "'PersonalAccessToken' variable is set in the 'pipeline-decorators-variables' group."
+          }
 
     - task: PowerShell@2
       name: InstallTools
@@ -80,8 +94,14 @@ stages:
         script: |
           Write-Output "Publishing extension..."
           $PackageFile = (Get-ChildItem -Filter '*.vsix' -File)[0].Name
-          Write-Output "Package file: $PackageFile"
-          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile --share-with $(ShareWithOrgs)
+          Write-Output "Using package file: $PackageFile"
+          if ([string]::IsNullOrEmpty($(ShareWithOrgs))) {
+            Write-Output "Publishing without '--share-with'..."
+            tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile
+          } else {
+            Write-Output "Publishing and sharing with the following organizations: $(ShareWithOrgs)"
+            tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile --share-with $(ShareWithOrgs)
+          }
     
     - task: PowerShell@2
       displayName: 'Commit changes'
@@ -95,4 +115,5 @@ stages:
           git add ${{ parameters.ManifestFile }}
           git commit -m "Incremented patch number [skip ci]"
           git push origin HEAD:$(Build.SourceBranchName)
+          Write-Output "If this step fails with a permission error, you may need to grant the 'Contribute' permission to the build service account on the repo. See https://learn.microsoft.com/azure/devops/pipelines/scripts/git-commands?view=azure-devops&tabs=yaml#grant-version-control-permissions-to-the-build-service for more information."
 
