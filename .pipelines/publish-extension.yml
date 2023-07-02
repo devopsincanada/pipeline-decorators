@@ -13,6 +13,9 @@
 # Issues with publishing from the command line:
 # https://github.com/microsoft/vsmarketplace/discussions/161
 #
+# Running Git commands in a pipeline:
+# https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/git-commands
+#
 
 parameters:
   - name: ManifestFile
@@ -38,26 +41,9 @@ stages:
   - job:
     steps:
 
-    # Should already be installed on the build agent
-    # - task: NodeTool@0
-    #   displayName: 'Install node'
-    #   inputs:
-    #     versionSpec: '>=18.x'
-    #     checkLatest: true
-
-    # - task: Npm@1
-    #   displayName: 'Install typescript'
-    #   inputs:
-    #     command: 'custom'
-    #     customCommand: 'install -g typescript'
-    #     # workingDir: '$(System.DefaultWorkingDirectory)'
-
-    # - task: Npm@1
-    #   displayName: 'Install tfx-cli'
-    #   inputs:
-    #     command: 'custom'
-    #     customCommand: 'install -g tfx-cli'
-    #     # workingDir: '$(System.DefaultWorkingDirectory)'
+    - checkout: self
+      clean: true
+      persistCredentials: true
 
     - task: PowerShell@2
       name: InstallPackages
@@ -66,49 +52,64 @@ stages:
         pwsh: true
         targetType: 'inline'
         script: |
+          Write-Output "Installing packages..."
           npm install -g typescript
           npm install -g tfx-cli
 
+    # - task: PowerShell@2
+    #   name: GetVariables
+    #   displayName: 'Get variables'
+    #   inputs:
+    #     pwsh: true
+    #     targetType: 'inline'
+    #     script: |
+    #       $publisherId = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.publisher')
+    #       $extensionId = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.id')
+    #       $extensionName = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.name')
+    #       $version = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.version')
+    #       $outputPath = $publisherId + '.' + $extensionId + '-' + $version + '.vsix'
+    #       Write-Host "##vso[task.setvariable variable=PublisherId]$publisherId"
+    #       Write-Host "##vso[task.setvariable variable=ExtensionId]$extensionId"
+    #       Write-Host "##vso[task.setvariable variable=ExtensionName]$extensionName"
+    #       Write-Host "##vso[task.setvariable variable=Version]$version"
+    #       Write-Host "##vso[task.setvariable variable=OutputPath]$outputPath"
+    #     # workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+    # - task: PowerShell@2
+    #   displayName: 'Get extension details'
+    #   inputs:
+    #     pwsh: true
+    #     targetType: 'inline'
+    #     script: |
+    #       # Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($PublisherId).$($ExtensionId)-$$(Version).vsix"
+
+    #       $extensionDetailsJson = (tfx extension show --json --no-color --service-url https://marketplace.visualstudio.com/ --auth-type pat --token $(PersonalAccessToken) --publisher '$(PublisherId)' --extension-id '$(ExtensionId)')
+
+
+    #       if ($extensionDetailsJson -ne 'null') {
+    #         Write-Output $extensionDetailsJson
+
+    #         $extensionDetails = ($extensionDetailsJson | ConvertFrom-Json -Depth 100)
+    #         # Write-Host "##vso[task.setvariable variable=ExtensionVersion]$($extensionDetails.versions[0].version)"
+    #       } else {
+    #         Write-Output "No extension details found"
+    #         Write-Host "##vso[task.setvariable variable=ExtensionVersion]0.0.0"
+    #       }
+    #     # workingDirectory: '$(System.DefaultWorkingDirectory)'
+
     - task: PowerShell@2
-      name: GetVariables
-      displayName: 'Get variables'
+      displayName: 'Increment patch number'
       inputs:
         pwsh: true
         targetType: 'inline'
         script: |
-          $publisherId = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.publisher')
-          $extensionId = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.id')
-          $extensionName = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.name')
-          $version = (Get-Content ${{ parameters.ManifestFile }} | jq -r '.version')
-          $outputPath = $publisherId + '.' + $extensionId + '-' + $version + '.vsix'
-          Write-Host "##vso[task.setvariable variable=PublisherId]$publisherId"
-          Write-Host "##vso[task.setvariable variable=ExtensionId]$extensionId"
-          Write-Host "##vso[task.setvariable variable=ExtensionName]$extensionName"
-          Write-Host "##vso[task.setvariable variable=Version]$version"
-          Write-Host "##vso[task.setvariable variable=OutputPath]$outputPath"
-        # workingDirectory: '$(System.DefaultWorkingDirectory)'
-
-    - task: PowerShell@2
-      displayName: 'Get extension details'
-      inputs:
-        pwsh: true
-        targetType: 'inline'
-        script: |
-          # Write-Host "##vso[task.setvariable variable=ExtensionPackageFile]$($PublisherId).$($ExtensionId)-$$(Version).vsix"
-
-          $extensionDetailsJson = (tfx extension show --json --no-color --service-url https://marketplace.visualstudio.com/ --auth-type pat --token $(PersonalAccessToken) --publisher '$(PublisherId)' --extension-id '$(ExtensionId)')
-
-
-          if ($extensionDetailsJson -ne 'null') {
-            Write-Output $extensionDetailsJson
-
-            $extensionDetails = ($extensionDetailsJson | ConvertFrom-Json -Depth 100)
-            # Write-Host "##vso[task.setvariable variable=ExtensionVersion]$($extensionDetails.versions[0].version)"
-          } else {
-            Write-Output "No extension details found"
-            Write-Host "##vso[task.setvariable variable=ExtensionVersion]0.0.0"
-          }
-        # workingDirectory: '$(System.DefaultWorkingDirectory)'
+          Write-Output "Incrementing patch number..."
+          $manifest = (Get-Content -Raw ${{ parameters.ManifestFile }} | ConvertFrom-Json -Depth 100)
+          $version = $manifefst.version
+          $versionParts = $version.Split('.')
+          $versionParts[2] = [string]([int]$versionParts[2] + 1)
+          $manifest.version = $versionParts -join '.'
+          $manifest | ConvertTo-Json -Depth 100 | Set-Content ${{ parameters.ManifestFile }}
 
     - task: PowerShell@2
       displayName: 'Package extension'
@@ -116,7 +117,8 @@ stages:
         pwsh: true
         targetType: 'inline'
         script: |
-          tfx extension create --manifests ${{ parameters.ManifestFile }} --output-path $(OutputPath)
+          Write-Output "Packaging extension..."
+          tfx extension create --manifests ${{ parameters.ManifestFile }}
 
     - task: PowerShell@2
       displayName: 'Publish extension'
@@ -124,13 +126,24 @@ stages:
         pwsh: true
         targetType: 'inline'
         script: |
-          # tfx extension publish --auth-type pat --token $(PersonalAccessToken) --service-url https://marketplace.visualstudio.com/ --manifests ${{ parameters.ManifestFile }} --share-with $(ShareWithOrgs) --vsix $(OutputPath) --rev-version
-
-          # tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --share-with $(ShareWithOrgs) --vsix $(OutputPath) --rev-version
-
-          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $(OutputPath)
+          Write-Output "Publishing extension..."
+          $PackageFile = ((Get-ChildItem -Filter '*.vsix' -File).Name)[0]
+          Write-Output "Package file: $PackageFile"
+          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile --share-with $(ShareWithOrgs)
     
-    
+    - task: PowerShell@2
+      displayName: 'Commit changes'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          Write-Output "Committing changes..."
+          git config --global user.email "nomail@contoso.com"
+          git config --global user.name "Azure Pipelines"
+          git add ${{ parameters.ManifestFile }}
+          git commit -m "Incremented patch number [skip ci]"
+          git push origin HEAD:$(Build.SourceBranchName)
+
 
     # - task: QueryAzureDevOpsExtensionVersion@4
     #   name: Query
