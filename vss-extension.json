@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "id": "pipeline-decorators",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "name": "Pipeline Decorators",
   "publisher": "steve-keeler-mcap873443",
   "targets": [
@@ -21,7 +21,7 @@
         "ms.azure-pipelines-agent-job.pre-job-tasks"
       ],
       "properties": {
-      "template": "pre-job-task.yml"
+        "template": "pre-job-task.yml"
       }
     },
     {
@@ -31,7 +31,7 @@
         "ms.azure-pipelines-agent-job.post-job-tasks"
       ],
       "properties": {
-      "template": "post-job-task.yml"
+        "template": "post-job-task.yml"
       }
     },
     {
@@ -41,7 +41,7 @@
         "ms.azure-pipelines-agent-job.post-checkout-tasks"
       ],
       "properties": {
-      "template": "post-checkout-task.yml"
+        "template": "post-checkout-task.yml"
       }
     }
   ],
