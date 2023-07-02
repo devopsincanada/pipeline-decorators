@@ -40,12 +40,12 @@ stages:
 
     - task: PowerShell@2
       name: InstallTools
-      displayName: 'Installing tools...'
+      displayName: 'Install tools'
       inputs:
         pwsh: true
         targetType: 'inline'
         script: |
-          Write-Output "Installing packages..."
+          Write-Output "Installing tools..."
           npm install -g typescript
           npm install -g tfx-cli
 
