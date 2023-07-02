@@ -45,7 +45,7 @@ stages:
         targetType: 'inline'
         script: |
           Write-Output "Checking Personal Access Token..."
-          if ([string]::IsNullOrEmpty($(PersonalAccessToken))) {
+          if ([string]::IsNullOrEmpty("$(PersonalAccessToken)")) {
             Write-Output "PersonalAccessToken is not set. Please set it in the pipeline variable group named 'pipeline-decorators-variables'. See https://learn.microsoft.com/azure/devops/extend/publish/command-line for more information."
             exit 1
           } else {
@@ -95,7 +95,7 @@ stages:
           Write-Output "Publishing extension..."
           $PackageFile = (Get-ChildItem -Filter '*.vsix' -File)[0].Name
           Write-Output "Using package file: $PackageFile"
-          if ([string]::IsNullOrEmpty($(ShareWithOrgs))) {
+          if ([string]::IsNullOrEmpty("$(ShareWithOrgs)")) {
             Write-Output "Publishing without '--share-with'..."
             tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile
           } else {
