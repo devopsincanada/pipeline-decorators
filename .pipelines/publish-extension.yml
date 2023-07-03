@@ -48,7 +48,7 @@ stages:
 
     - task: PowerShell@2
       condition: eq(variables['PersonalAccessToken'], '')
-      displayName: 'PAT not set'
+      displayName: 'Error if PAT is not set'
       inputs:
         pwsh: true
         targetType: 'inline'
