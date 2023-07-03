@@ -15,6 +15,14 @@ parameters:
     type: string
     displayName: Extension manifest file
     default: 'vss-extension.json'
+  - name: GitUserEmail
+    type: string
+    displayName: Git user email
+    default: 'noemail@contoso.com'
+  - name: GitUserName
+    type: string
+    displayName: Git user name
+    default: 'Azure Pipelines'
 
 trigger:
 - main
@@ -39,18 +47,14 @@ stages:
       persistCredentials: true
 
     - task: PowerShell@2
-      displayName: 'Check PAT is set'
+      condition: eq(variables['PersonalAccessToken'], '')
+      displayName: 'PAT not set'
       inputs:
         pwsh: true
         targetType: 'inline'
         script: |
-          Write-Output "Checking Personal Access Token..."
-          if ([string]::IsNullOrEmpty("$(PersonalAccessToken)")) {
-            Write-Output "PersonalAccessToken is not set. Please set it in the pipeline variable group named 'pipeline-decorators-variables'. See https://learn.microsoft.com/azure/devops/extend/publish/command-line for more information."
-            exit 1
-          } else {
-            Write-Output "'PersonalAccessToken' variable is set in the 'pipeline-decorators-variables' group."
-          }
+          Write-Output "Variable 'PersonalAccessToken' is not set. Please set it in the pipeline variable group named 'pipeline-decorators-variables'. See https://learn.microsoft.com/azure/devops/extend/publish/command-line for more information."
+          exit 1
 
     - task: PowerShell@2
       name: InstallTools
@@ -87,7 +91,8 @@ stages:
           tfx extension create --manifests ${{ parameters.ManifestFile }}
 
     - task: PowerShell@2
-      displayName: 'Publish extension'
+      condition: eq(variables['ShareWithOrgs'], '')
+      displayName: 'Publish extension without sharing'
       inputs:
         pwsh: true
         targetType: 'inline'
@@ -95,23 +100,29 @@ stages:
           Write-Output "Publishing extension..."
           $PackageFile = (Get-ChildItem -Filter '*.vsix' -File)[0].Name
           Write-Output "Using package file: $PackageFile"
-          if ([string]::IsNullOrEmpty("$(ShareWithOrgs)")) {
-            Write-Output "Publishing without '--share-with'..."
-            tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile
-          } else {
-            Write-Output "Publishing and sharing with the following organizations: $(ShareWithOrgs)"
-            tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile --share-with $(ShareWithOrgs)
-          }
-    
+          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile
+
+    - task: PowerShell@2
+      condition: ne(variables['ShareWithOrgs'], '')
+      displayName: 'Publish extension and share with orgs'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          Write-Output "Publishing and sharing with the following organizations: $(ShareWithOrgs)"
+          $PackageFile = (Get-ChildItem -Filter '*.vsix' -File)[0].Name
+          Write-Output "Using package file: $PackageFile"
+          tfx extension publish --auth-type pat --token $(PersonalAccessToken) --manifests ${{ parameters.ManifestFile }} --vsix $PackageFile --share-with $(ShareWithOrgs)
+              
     - task: PowerShell@2
       displayName: 'Commit changes'
       inputs:
         pwsh: true
         targetType: 'inline'
         script: |
-          Write-Output "Committing changes..."
-          git config --global user.email "nomail@contoso.com"
-          git config --global user.name "Azure Pipelines"
+          Write-Output "Committing version changes to manifest file ${{ parameters.ManifestFile }}"
+          git config --global user.email ${{ parameters.GitUserEmail }}
+          git config --global user.name ${{ parameters.GitUserName }}
           git add ${{ parameters.ManifestFile }}
           git commit -m "Incremented patch number [skip ci]"
           git push origin HEAD:$(Build.SourceBranchName)
